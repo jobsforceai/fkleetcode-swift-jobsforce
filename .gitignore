@@ -1,0 +1,42 @@
+# Xcode
+#
+# gitignore contributors: remember to keep this file alphabetical and add your name
+# to the contributors list below!
+#
+# Swift Package Manager
+#
+# Add this line if you want to avoid checking in source code from Swift Package Manager dependencies.
+# Packages/
+# Package.pins
+# Package.resolved
+# *.xcodeproj
+#
+# Xcode project files
+#
+# build/
+# DerivedData/
+#
+# Other
+#
+.DS_Store
+/xcuserdata
+xcuserdata/
+*.xcuserdatad
+# Pods/
+# .swiftpm/build/
+#
+# Carthage
+#
+# Carthage/Build
+# Carthage/Checkouts
+#
+# fastlane
+#
+# fastlane/report.xml
+# fastlane/Preview.html
+# fastlane/screenshots
+# fastlane/test_output
+#
+# Codecov
+#
+# *.profraw

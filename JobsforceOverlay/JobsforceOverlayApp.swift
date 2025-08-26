@@ -1,17 +1,12 @@
-//
-//  JobsforceOverlayApp.swift
-//  JobsforceOverlay
-//
-//  Created by Abhinay Prakash Reddy on 8/25/25.
-//
-
 import SwiftUI
+import AppKit   // ← add this
 
 @main
 struct JobsforceOverlayApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-    }
+  @NSApplicationDelegateAdaptor(AppDelegate.self)
+  var appDelegate: AppDelegate    // ← add explicit type to disambiguate
+
+  var body: some Scene {
+    Settings { EmptyView() }
+  }
 }
