@@ -20,7 +20,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
       hotkeys = Hotkeys(
         onToggle: { [weak self] in self?.toggleOverlay() },
         onNudge:  { [weak self] dx, dy in self?.nudge(dx: dx, dy: dy) },
-        onShot:   { [weak self] in self?.captureFullScreen() }   // ← add this
+        onShot:   { [weak self] in self?.captureFullScreen() },
+        onFocusChat: {
+            NotificationCenter.default.post(name: .jfSetFocus, object: "chat")
+          },
+          onFocusAI: {
+            NotificationCenter.default.post(name: .jfSetFocus, object: "ai")
+          }
       )
 
   }
@@ -89,4 +95,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 extension Notification.Name {
   static let jfShotReady = Notification.Name("JFShotReady")
+    static let jfSetFocus  = Notification.Name("JFSetFocus")
 }
