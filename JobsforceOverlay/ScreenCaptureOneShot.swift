@@ -10,24 +10,33 @@ final class SingleFrameCapture: NSObject, SCStreamOutput {
   private var completion: ((URL?) -> Void)?
   private let ci = CIContext()
 
-  func captureFirstFrame(from display: SCDisplay, completion: @escaping (URL?) -> Void) {
-    self.completion = completion
+    func captureFirstFrame(from display: SCDisplay, completion: @escaping (URL?) -> Void) {
+        self.completion = completion
+        let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+        let config = SCStreamConfiguration()
+        config.capturesAudio = false
 
-    let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
-    let config = SCStreamConfiguration()
-    config.capturesAudio = false
-    // (width/height can be left at 0 to let SC choose; works fine for a still)
+        let stream = SCStream(filter: filter, configuration: config, delegate: nil)
+        self.stream = stream
 
-    let stream = SCStream(filter: filter, configuration: config, delegate: nil)
-    self.stream = stream
+        do {
+            try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue(label: "jf.shot"))
 
-    do {
-      try stream.addStreamOutput(self, type: .screen, sampleHandlerQueue: DispatchQueue(label: "jf.shot"))
-      try stream.startCapture()
-    } catch {
-      finish(with: nil)
+            if #available(macOS 14.0, *) {
+                Task {
+                    do {
+                        try await stream.startCapture()
+                    } catch {
+                        self.finish(with: nil)
+                    }
+                }
+            } else {
+                stream.startCapture { _ in }
+            }
+        } catch {
+            finish(with: nil)
+        }
     }
-  }
 
   func stream(_ stream: SCStream, didOutputSampleBuffer sb: CMSampleBuffer, of type: SCStreamOutputType) {
     guard type == .screen, let pb = sb.imageBuffer else { return }

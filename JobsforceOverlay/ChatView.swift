@@ -74,6 +74,15 @@ struct ChatView: View {
         }
       }
     }
+    .onReceive(NotificationCenter.default.publisher(for: .jfTranscript)
+      .receive(on: RunLoop.main)) { note in
+        if let dict = note.object as? [String: Any],
+           let text = dict["text"] as? String,
+           let source = dict["source"] as? String {
+          let prefix = (source == "mic") ? "You" : "System"
+          chatModel.items.append(.init(text: "\(prefix): \(text)", isAI: (source != "mic")))
+        }
+    }
   }
 
   // MARK: Header

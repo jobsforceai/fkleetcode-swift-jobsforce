@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
   var window: OverlayWindow!
   private var hotkeys: Hotkeys?
     private var oneShot: SingleFrameCapture?
+    
+    private let transcriber = TranscriptionManager()
 
 
   func applicationDidFinishLaunching(_ notification: Notification) {
@@ -28,6 +30,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NotificationCenter.default.post(name: .jfSetFocus, object: "ai")
           }
       )
+      
+      transcriber.startAll()  
 
   }
 
@@ -96,4 +100,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension Notification.Name {
   static let jfShotReady = Notification.Name("JFShotReady")
     static let jfSetFocus  = Notification.Name("JFSetFocus")
+    static let jfTranscript  = Notification.Name("JFTranscript")
 }
