@@ -26,6 +26,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
           },
           onFocusAI: {
             NotificationCenter.default.post(name: .jfSetFocus, object: "ai")
+          },
+          onToggleTheme: {
+            NotificationCenter.default.post(name: .jfToggleTheme, object: nil)
           }
       )
 
@@ -96,4 +99,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 extension Notification.Name {
   static let jfShotReady = Notification.Name("JFShotReady")
     static let jfSetFocus  = Notification.Name("JFSetFocus")
+    static let jfToggleTheme = Notification.Name("JFToggleTheme")
 }

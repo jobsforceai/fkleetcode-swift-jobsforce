@@ -12,6 +12,7 @@ final class Hotkeys {
     // Tab switching hotkeys
       private var focusChat: HotKey?
       private var focusAI: HotKey?
+      private var themeToggle: HotKey?
     
     private var leftTimer: Timer?
     private var rightTimer: Timer?
@@ -41,7 +42,8 @@ final class Hotkeys {
          onNudge: @escaping (_ dx: CGFloat, _ dy: CGFloat) -> Void,
          onShot:  @escaping () -> Void,
     onFocusChat: @escaping () -> Void,
-        onFocusAI:   @escaping () -> Void
+        onFocusAI:   @escaping () -> Void,
+        onToggleTheme: @escaping () -> Void
     )
     {
         // ⌘⌥V → toggle overlay
@@ -75,6 +77,10 @@ final class Hotkeys {
             // ⌘2 → focus AI Chat
             focusAI = HotKey(key: .two, modifiers: [.command])
             focusAI?.keyDownHandler = onFocusAI
+            
+        // ⌘⌥T → Toggle theme
+        themeToggle = HotKey(key: .t, modifiers: [.command, .option])
+        themeToggle?.keyDownHandler = onToggleTheme
 
   }
 }
