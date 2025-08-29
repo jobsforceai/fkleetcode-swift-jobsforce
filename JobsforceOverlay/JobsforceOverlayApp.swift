@@ -10,3 +10,8 @@ struct JobsforceOverlayApp: App {
     Settings { EmptyView() }
   }
 }
+
+//Useful commands:
+//tccutil reset ScreenCapture
+//tccutil reset Microphone
+//tccutil reset SpeechRecognition

@@ -21,60 +21,99 @@ struct ChatView: View {
   @StateObject private var chatModel = ChatColumnModel()
   @StateObject private var aiModel   = ChatColumnModel()
   @State private var focus: FocusMode = .chat
+    
+    @StateObject private var transcriber = TranscriptionDirector()
 
-  var body: some View {
-    ZStack {
-//      RoundedRectangle(cornerRadius: 20)
-//        .fill(.ultraThinMaterial.opacity(0.88))
-//        .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 12)
-//
-//      VStack(spacing: 0) {
-//        header
-//        Divider()
-//        activePanel
-//        footerHints
-//      }
-        Color.clear
-            .liquidGlass(
-              radius: 22,
-              material: .popover, // ← clearest/least blur
-              tint: .white,
-              tintOpacity: 0.015,               // ← almost no milk
-              saturation: 1.6,                   // keep colors punchy but not neon
-              dropShadow: 18
-            )
-
-          VStack(spacing: 0) {
-            header
-            Divider().opacity(0.18)   // lighter divider on clear glass
-            activePanel
-            footerHints
-          }
-    }
-    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-    .frame(minWidth: 720, minHeight: 420)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(.clear)
-    .onAppear {
-      if chatModel.items.isEmpty {
-        chatModel.items.append(.init(text: "Connected. Waiting for your first screenshot…", isAI: true))
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .jfShotReady)) { note in
-      if let url = note.object as? URL {
-        chatModel.items.append(.init(text: "Screenshot: \(url.lastPathComponent)", isAI: false))
-      } else {
-        chatModel.items.append(.init(text: "Screenshot failed (permission?)", isAI: true))
-      }
-    }
-    .onReceive(NotificationCenter.default.publisher(for: .jfSetFocus)) { note in
-      if let which = note.object as? String {
-        withAnimation(.easeInOut(duration: 0.18)) {
-          focus = (which == "ai") ? .ai : .chat
+    var body: some View {
+        ZStack {
+            //      RoundedRectangle(cornerRadius: 20)
+            //        .fill(.ultraThinMaterial.opacity(0.88))
+            //        .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 12)
+            //
+            //      VStack(spacing: 0) {
+            //        header
+            //        Divider()
+            //        activePanel
+            //        footerHints
+            //      }
+            Color.clear
+                .liquidGlass(
+                    radius: 22,
+                    material: .popover, // ← clearest/least blur
+                    tint: .white,
+                    tintOpacity: 0.015,               // ← almost no milk
+                    saturation: 1.6,                   // keep colors punchy but not neon
+                    dropShadow: 18
+                )
+            
+            
+            VStack(spacing: 0) {
+                header
+                
+                // Live transcription strip (can be collapsed if you like)
+                VStack(spacing: 8) {
+                    HStack {
+                        Button(transcriber.isRunning ? "Stop Transcription" : "Start Transcription") {
+                            if transcriber.isRunning {
+                                transcriber.stop()
+                            } else {
+                                transcriber.requestSpeechAuth { ok in if ok { transcriber.start() } }
+                            }
+                        }
+                        .buttonStyle(.borderedProminent)
+                        
+                        Spacer()
+                    }
+                    
+                    // Two small panels: Mic + System
+                    HStack(spacing: 12) {
+                        transcriptCard(title: "Mic",    text: transcriber.micText)
+                        transcriptCard(title: "System", text: transcriber.systemText)
+                    }
+                    .frame(height: 120)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                
+                Divider().opacity(0.18)
+                
+                activePanel
+                footerHints
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .frame(minWidth: 720, minHeight: 420)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.clear)
+            .onAppear {
+                if chatModel.items.isEmpty {
+                    chatModel.items.append(.init(text: "Connected. Waiting for your first screenshot…", isAI: true))
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .jfShotReady)) { note in
+                if let url = note.object as? URL {
+                    chatModel.items.append(.init(text: "Screenshot: \(url.lastPathComponent)", isAI: false))
+                } else {
+                    chatModel.items.append(.init(text: "Screenshot failed (permission?)", isAI: true))
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .jfSetFocus)) { note in
+                if let which = note.object as? String {
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        focus = (which == "ai") ? .ai : .chat
+                    }
+                }
+            }
         }
-      }
     }
-  }
+      
+      private func transcriptCard(title: String, text: String) -> some View {
+          VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.caption).foregroundStyle(.secondary)
+            ScrollView { Text(text).frame(maxWidth: .infinity, alignment: .leading) }
+          }
+          .padding(10)
+          .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        }
 
   // MARK: Header
 

@@ -33,9 +33,22 @@
 		E754BB502E5C9F0C007188A9 /* JobsforceOverlayUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = JobsforceOverlayUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		65DFCDED2E617C54000796A9 /* Exceptions for "JobsforceOverlay" folder in "JobsforceOverlay" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E754BB372E5C9F09007188A9 /* JobsforceOverlay */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E754BB3A2E5C9F09007188A9 /* JobsforceOverlay */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				65DFCDED2E617C54000796A9 /* Exceptions for "JobsforceOverlay" folder in "JobsforceOverlay" target */,
+			);
 			path = JobsforceOverlay;
 			sourceTree = "<group>";
 		};
@@ -407,6 +420,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JobsforceOverlay/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -432,6 +446,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = JobsforceOverlay/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
