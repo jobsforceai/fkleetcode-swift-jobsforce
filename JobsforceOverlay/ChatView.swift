@@ -24,22 +24,12 @@ struct ChatView: View {
 
   var body: some View {
     ZStack {
-//      RoundedRectangle(cornerRadius: 20)
-//        .fill(.ultraThinMaterial.opacity(0.88))
-//        .shadow(color: .black.opacity(0.16), radius: 24, x: 0, y: 12)
-//
-//      VStack(spacing: 0) {
-//        header
-//        Divider()
-//        activePanel
-//        footerHints
-//      }
         Color.clear
             .liquidGlass(
               radius: 22,
               material: .popover, // ← clearest/least blur
               tint: .white,
-              tintOpacity: 0.015,               // ← almost no milk
+              tintOpacity: 0.12,               // ← almost no milk
               saturation: 1.6,                   // keep colors punchy but not neon
               dropShadow: 18
             )

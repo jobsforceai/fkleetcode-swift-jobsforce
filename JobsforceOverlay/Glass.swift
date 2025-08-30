@@ -3,7 +3,7 @@ import AppKit
 
 // Native macOS blur
 struct BlurView: NSViewRepresentable {
-  var material: NSVisualEffectView.Material = .hudWindow // very glassy
+  var material: NSVisualEffectView.Material = .popover   // clearer than .hudWindow
   var blending: NSVisualEffectView.BlendingMode = .behindWindow
   var state: NSVisualEffectView.State = .active
 
@@ -21,63 +21,90 @@ struct BlurView: NSViewRepresentable {
   }
 }
 
-// One-stop "liquid glass" styling
+// Thin, high-quality glass edge
+private extension Shape {
+  func glassEdge(cornerRadius: CGFloat) -> some View {
+    self
+      .stroke(
+        LinearGradient(
+          colors: [
+            .white.opacity(0.55), // top-left edge
+            .white.opacity(0.55),
+            .white.opacity(0.55),
+            .white.opacity(0.55) // bottom-right
+          ],
+          startPoint: .topLeading, endPoint: .bottomTrailing
+        ),
+        lineWidth: 1
+      )
+      .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+  }
+}
+
+// One-stop “liquid glass” styling
 struct LiquidGlass: ViewModifier {
-  var radius: CGFloat = 22
-  var material: NSVisualEffectView.Material = .hudWindow
-  var tint: Color = .white
-  var tintOpacity: Double = 0.08  // how milky the glass is (lower = clearer)
-  var saturation: Double = 1.7    // punchy colors behind the blur
-  var dropShadow: Double = 28
+  var radius: CGFloat = 22 // rounding for every plate/corner
+  var material: NSVisualEffectView.Material = .underWindowBackground
+    var tint: Color = .white
+    var tintOpacity: Double = 0.8  // how milky (0 = clear)
+  var saturation: Double = 1.6  // how vivid the blurred content looks
+  var dropShadow: Double = 18  // softness/lift of the card
 
   func body(content: Content) -> some View {
     content
       .background(
-        BlurView(material: material)
+        // Base frosted plate
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
+          .fill(.clear)
+//        blurring
+            .background(BlurView(material: material).opacity(0.5).blur(radius: 30, opaque: true))
           .saturation(saturation)
-          .background(tint.opacity(tintOpacity))
-          .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
-      )
-      // outer glass edge
-      .overlay(
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
-          .stroke(
-            LinearGradient(
-              colors: [Color.white.opacity(0.05), Color.white.opacity(0.06)],
-              startPoint: .topLeading, endPoint: .bottomTrailing
-            ),
-            lineWidth: 1
+          // milky wash over the blur
+          .overlay(RoundedRectangle(cornerRadius: radius).fill(tint.opacity(tintOpacity)))
+          // glossy background color
+          .overlay(
+            RoundedRectangle(cornerRadius: radius, style: .continuous)
+//              .fill(
+//                LinearGradient(
+//                  colors: [
+//                    .white.opacity(0.2),
+//                    .white.opacity(0.2),
+//                    .clear,
+//                    .clear
+//                  ],
+//                  startPoint: .top, endPoint: .bottom
+//                )
+//              )
+                .fill(.black.opacity(0.05))
+                .blendMode(.plusLighter)
+                .blur(radius: 30, opaque: false)
           )
+          // crisp edge highlight
+          .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous).glassEdge(cornerRadius: radius))
+          // soft outer shadow to lift the plate
+          .shadow(color: .black.opacity(0.18), radius: dropShadow, x: 0, y: dropShadow * 0.45)
+          // faint top glow for depth
+          .shadow(color: .white.opacity(0.10), radius: 6, x: 0, y: 0)
       )
-      // inner highlight for that liquid look
-      .overlay(
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
-          .stroke(
-            LinearGradient(
-              colors: [Color.white.opacity(0.05), Color.clear],
-              startPoint: .top, endPoint: .bottom
-            ),
-            lineWidth: 0.7
-          )
-          .blendMode(.overlay)
-      )
-      // soft drop shadow + a faint top glow
-      .shadow(color: .black.opacity(0.22), radius: dropShadow, x: 0, y: 18)
-      .shadow(color: .white.opacity(0.10), radius: 6, x: 0, y: 0)
   }
 }
 
 extension View {
   func liquidGlass(
     radius: CGFloat = 22,
-    material: NSVisualEffectView.Material = .hudWindow,
+    material: NSVisualEffectView.Material = .popover,
     tint: Color = .white,
-    tintOpacity: Double = 0.08,
-    saturation: Double = 1.7,
-    dropShadow: Double = 28
+    tintOpacity: Double = 0.12,
+    saturation: Double = 1.6,
+    dropShadow: Double = 18
   ) -> some View {
-    modifier(LiquidGlass(radius: radius, material: material, tint: tint,
-                         tintOpacity: tintOpacity, saturation: saturation,
-                         dropShadow: dropShadow))
+    modifier(LiquidGlass(
+      radius: radius,
+      material: material,
+      tint: tint,
+      tintOpacity: tintOpacity,
+      saturation: saturation,
+      dropShadow: dropShadow
+    ))
   }
 }
