@@ -4,14 +4,17 @@ import AVFAudio
 final class LiveTranscriber: NSObject, ObservableObject {
     @Published var transcript = ""
     @Published var isRunning = false
+    
+    // NEW: simple callbacks for logging
+        var onPartial: ((String) -> Void)?
+        var onFinal:   ((String) -> Void)?
 
     private let recognizer: SFSpeechRecognizer
     private var task: SFSpeechRecognitionTask?
     private var request: SFSpeechAudioBufferRecognitionRequest?
 
-    init(locale: Locale = .current) {
-        // self.recognizer = SFSpeechRecognizer(locale: locale)!
-        self.recognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
+    init(locale: Locale = Locale(identifier: "en-US")) { // stable locale helps during debugging
+        self.recognizer = SFSpeechRecognizer(locale: locale)!
         super.init()
     }
 
@@ -33,8 +36,16 @@ final class LiveTranscriber: NSObject, ObservableObject {
         task = recognizer.recognitionTask(with: req) { [weak self] result, error in
             guard let self else { return }
             if let result = result {
-                self.transcript = result.bestTranscription.formattedString
-                if result.isFinal { self.stop() }
+                let text = result.bestTranscription.formattedString
+                self.transcript = text
+                if result.isFinal {
+                    print("FINAL>", text)
+                    self.onFinal?(text)
+                    self.stop()
+                } else {
+                    print("PARTIAL>", text)
+                    self.onPartial?(text)
+                }
             } else if let err = error as NSError? {
                 // helpful debug print while you iterate
                 print("Speech task error:", err.domain, err.code, err.localizedDescription)

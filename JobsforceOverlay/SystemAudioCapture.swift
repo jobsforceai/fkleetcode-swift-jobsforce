@@ -83,7 +83,7 @@ final class SystemAudioCapture: NSObject, SCStreamOutput {
 
         // DEBUG: confirm audio flow
         let framesIn = CMSampleBufferGetNumSamples(sampleBuffer)
-        if framesIn > 0 { print("System audio samples:", framesIn) }
+        // if framesIn > 0 { print("System audio samples:", framesIn) }
 
         // Use the simple, robust copier
         guard let (srcBuffer, srcFormat) = sampleBuffer.makePCMBufferAndFormat() else { return }

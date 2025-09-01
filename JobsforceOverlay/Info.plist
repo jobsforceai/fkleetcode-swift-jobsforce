@@ -6,6 +6,8 @@
     <string>Jobsforce needs microphone access to transcribe your speech.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Jobsforce uses Speech Recognition to convert audio to text.</string>
+    <key>LSUIElement</key>
+    <true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict/>

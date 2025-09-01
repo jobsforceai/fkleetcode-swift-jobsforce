@@ -22,6 +22,11 @@ final class TranscriptionDirector: ObservableObject {
         sysTrans.$transcript
             .receive(on: DispatchQueue.main)   // ← fix
             .assign(to: &$systemText)
+        
+        micTrans.onPartial = { print("MIC>", $0) }
+        sysTrans.onPartial = { print("SYS>", $0) }
+        micTrans.onFinal   = { print("MIC FINAL>", $0) }
+        sysTrans.onFinal   = { print("SYS FINAL>", $0) }
     }
 
     func requestSpeechAuth(completion: @escaping (Bool)->Void) {
