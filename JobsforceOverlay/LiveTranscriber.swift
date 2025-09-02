@@ -38,14 +38,14 @@ final class LiveTranscriber: NSObject, ObservableObject {
             if let result = result {
                 let text = result.bestTranscription.formattedString
                 self.transcript = text
-                if result.isFinal {
-                    print("FINAL>", text)
-                    self.onFinal?(text)
-                    self.stop()
-                } else {
-                    print("PARTIAL>", text)
-                    self.onPartial?(text)
-                }
+//                if result.isFinal {
+//                    print("FINAL>", text)
+//                    self.onFinal?(text)
+//                    self.stop()
+//                } else {
+//                    print("PARTIAL>", text)
+//                    self.onPartial?(text)
+//                }
             } else if let err = error as NSError? {
                 // helpful debug print while you iterate
                 print("Speech task error:", err.domain, err.code, err.localizedDescription)
@@ -64,5 +64,13 @@ final class LiveTranscriber: NSObject, ObservableObject {
         task?.cancel()
         task = nil
         request = nil
+    }
+    
+    func requestSpeechAuth(_ completion: @escaping (Bool) -> Void) {
+        let status = SFSpeechRecognizer.authorizationStatus()
+        if status == .authorized { completion(true); return }
+        SFSpeechRecognizer.requestAuthorization { newStatus in
+            DispatchQueue.main.async { completion(newStatus == .authorized) }
+        }
     }
 }

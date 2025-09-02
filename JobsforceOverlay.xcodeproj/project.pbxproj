@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		65DE862F2E6743B000248B98 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 65DE862E2E6743B000248B98 /* SocketIO */; };
 		E754BB6D2E5CBABE007188A9 /* HotKey in Frameworks */ = {isa = PBXBuildFile; productRef = E754BB6C2E5CBABE007188A9 /* HotKey */; };
 /* End PBXBuildFile section */
 
@@ -70,6 +71,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				E754BB6D2E5CBABE007188A9 /* HotKey in Frameworks */,
+				65DE862F2E6743B000248B98 /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +133,7 @@
 			name = JobsforceOverlay;
 			packageProductDependencies = (
 				E754BB6C2E5CBABE007188A9 /* HotKey */,
+				65DE862E2E6743B000248B98 /* SocketIO */,
 			);
 			productName = JobsforceOverlay;
 			productReference = E754BB382E5C9F09007188A9 /* JobsforceOverlay.app */;
@@ -216,6 +219,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				E754BB692E5CBA08007188A9 /* XCRemoteSwiftPackageReference "HotKey" */,
+				65DE862D2E6743B000248B98 /* XCRemoteSwiftPackageReference "socket" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E754BB392E5C9F09007188A9 /* Products */;
@@ -567,6 +571,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		65DE862D2E6743B000248B98 /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		E754BB692E5CBA08007188A9 /* XCRemoteSwiftPackageReference "HotKey" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/soffes/HotKey";
@@ -578,6 +590,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		65DE862E2E6743B000248B98 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 65DE862D2E6743B000248B98 /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
+		};
 		E754BB6C2E5CBABE007188A9 /* HotKey */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = E754BB692E5CBA08007188A9 /* XCRemoteSwiftPackageReference "HotKey" */;
