@@ -16,6 +16,16 @@ final class ChatColumnModel: ObservableObject {
 
 enum FocusMode: String, CaseIterable { case chat = "Chat", ai = "AI Chat" }
 
+// HH:MM:SS from milliseconds
+private func formatRemaining(_ ms: Int) -> String {
+  let total = max(0, ms / 1000)
+  let h = total / 3600
+  let m = (total % 3600) / 60
+  let s = total % 60
+  return String(format: "%02d:%02d:%02d", h, m, s)
+}
+
+
 // MARK: - Main View
 
 struct ChatView: View {
@@ -25,10 +35,10 @@ struct ChatView: View {
     
     @StateObject private var gateway = ChatGatewaySocket(env: .local)
 
-  // 🔒 Locking + theme state (added)
-  @State private var colorScheme: ColorScheme = .light
-  @State private var isChatLocked = true
-  @State private var isAILocked  = true
+    // 🔒 Locking + theme state (added)
+    @State private var colorScheme: ColorScheme = .light
+    @State private var isChatLocked = true
+    @State private var isAILocked  = true
 
   // 🎙️ Transcription
   @StateObject private var transcriber = TranscriptionDirector()
@@ -36,65 +46,71 @@ struct ChatView: View {
   var body: some View {
     ZStack {
       Color.clear
-        .liquidGlass(
-          radius: 22,
-          material: .popover, // clearest/least blur
-          tint: .white,
-          tintOpacity: 0.015,
-          saturation: 1.6,
-          dropShadow: 18
-        )
-
-      VStack(spacing: 0) {
-        header
-          
-          // Tiny presence strip under header
-          HStack(spacing: 10) {
-            Circle().frame(width: 8, height: 8)
-              .foregroundStyle(gateway.isConnected ? .green : .red)
-            Text(gateway.isConnected ? "Connected" : "Disconnected")
-              .font(.caption).foregroundStyle(.secondary)
-            if gateway.presence.count > 0 {
-              Text("Participants: \(gateway.presence.count) • Time left: \(gateway.presence.remainingMs/1000)s")
-                .font(.caption).foregroundStyle(.secondary)
-            }
-            Spacer()
-          }
-          .padding(.horizontal, 12)
-          .padding(.top, 4)
-
-        // Live transcription strip
-        VStack(spacing: 8) {
-          HStack {
-            Button(transcriber.isRunning ? "Stop Transcription" : "Start Transcription") {
-              if transcriber.isRunning {
-                transcriber.stop()
-              } else {
-                transcriber.requestSpeechAuth { ok in if ok { transcriber.start() } }
-              }
-            }
-            .buttonStyle(.borderedProminent)
-            Spacer()
-          }
-
-          HStack(spacing: 12) {
-            transcriptCard(title: "Mic",    text: transcriber.micText)
-            transcriptCard(title: "System", text: transcriber.systemText)
-          }
-          .frame(height: 120)
+//        .liquidGlass(
+//          radius: 22,
+//          material: .popover, // clearest/least blur
+//          tint: .white,
+//          tintOpacity: 0.015,
+//          saturation: 1.6,
+//          dropShadow: 18
+//        )
+        
+        // Two separate islands with a gap
+        VStack(spacing: 12) {
+          headerIsland
+          contentIsland
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(35)
 
-        Divider().opacity(0.18)
-
-        activePanel
-        footerHints
-      }
-      .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-      .frame(minWidth: 720, minHeight: 500)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(.clear)
+//      VStack(spacing: 0) {
+//        header
+//          
+//          // Tiny presence strip under header
+//          HStack(spacing: 10) {
+//            Circle().frame(width: 8, height: 8)
+//              .foregroundStyle(gateway.isConnected ? .green : .red)
+//            Text(gateway.isConnected ? "Connected" : "Disconnected")
+//              .font(.caption).foregroundStyle(.secondary)
+//            if gateway.presence.count > 0 {
+//              Text("Participants: \(gateway.presence.count) • Time left: \(gateway.presence.remainingMs/1000)s")
+//                .font(.caption).foregroundStyle(.secondary)
+//            }
+//            Spacer()
+//          }
+//          .padding(.horizontal, 12)
+//          .padding(.top, 4)
+//
+//        // Live transcription strip
+//        VStack(spacing: 8) {
+//          HStack {
+//            Button(transcriber.isRunning ? "Stop Transcription" : "Start Transcription") {
+//              if transcriber.isRunning {
+//                transcriber.stop()
+//              } else {
+//                transcriber.requestSpeechAuth { ok in if ok { transcriber.start() } }
+//              }
+//            }
+//            .buttonStyle(.borderedProminent)
+//            Spacer()
+//          }
+//
+//          HStack(spacing: 12) {
+//            transcriptCard(title: "Mic",    text: transcriber.micText)
+//            transcriptCard(title: "System", text: transcriber.systemText)
+//          }
+//          .frame(height: 120)
+//        }
+//        .padding(.horizontal, 12)
+//        .padding(.vertical, 8)
+//
+//        Divider().opacity(0.18)
+//
+//        activePanel
+//        footerHints
+//      }
+//      .frame(minWidth: 720, minHeight: 500)
+//      .frame(maxWidth: .infinity, maxHeight: .infinity)
+//      .background(.clear)
       .environmentObject(gateway)
       .onAppear {
           // 1) Build socket manager & listeners once
@@ -140,6 +156,92 @@ struct ChatView: View {
     .padding(10)
     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
   }
+    
+    // The top, small “toolbar” island
+    private var headerIsland: some View {
+      header
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+          .ultraThinMaterial,
+          in: RoundedRectangle(cornerRadius: 16, style: .continuous)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+          RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 16, x: 0, y: 6)
+    }
+
+    // The big content island underneath
+    private var contentIsland: some View {
+      VStack(spacing: 0) {
+
+          // presence strip just under the header
+          HStack(spacing: 10) {
+            Circle().frame(width: 8, height: 8)
+              .foregroundStyle(gateway.isConnected ? .green : .red)
+            Text(gateway.isConnected ? "Connected" : "Disconnected")
+              .font(.caption).foregroundStyle(.secondary)
+
+            if gateway.presence.count > 0 {
+              let left = formatRemaining(gateway.presence.remainingMs)
+              Text("Participants: \(gateway.presence.count) • Time left: \(left)")
+                .font(.caption).foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.primary.opacity(0.06), in: Capsule())
+            }
+
+            Spacer()
+          }
+          .padding(.horizontal, 12)
+          .padding(.top, 8)
+          .padding(.bottom, 4)
+
+        // live transcription block
+        VStack(spacing: 8) {
+          HStack {
+            Button(transcriber.isRunning ? "Stop Transcription" : "Start Transcription") {
+              if transcriber.isRunning {
+                transcriber.stop()
+              } else {
+                transcriber.requestSpeechAuth { ok in if ok { transcriber.start() } }
+              }
+            }
+            .buttonStyle(.borderedProminent)
+            Spacer()
+          }
+
+          HStack(spacing: 12) {
+            transcriptCard(title: "Mic",    text: transcriber.micText)
+            transcriptCard(title: "System", text: transcriber.systemText)
+          }
+          .frame(height: 120)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+
+        Divider().opacity(0.16)
+
+        // your panel + footer
+        activePanel
+        footerHints
+      }
+      .padding(10)
+      .background(
+        .ultraThinMaterial,
+        in: RoundedRectangle(cornerRadius: 20, style: .continuous)
+      )
+      .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+      .overlay(
+        RoundedRectangle(cornerRadius: 20, style: .continuous)
+          .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
+      )
+      .shadow(color: .black.opacity(0.20), radius: 22, x: 0, y: 10)
+    }
+
 
   // MARK: Header
 
@@ -377,6 +479,9 @@ private struct ChatPanelView: View {
     @State private var draft: String = ""
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject var gateway: ChatGatewaySocket
+    
+    @State private var isNearBottom: Bool = true
+    private let bottomSentinelID = "BOTTOM_SENTINEL"
 
     var body: some View {
         Group {
@@ -403,50 +508,75 @@ private struct ChatPanelView: View {
     }
 
   private var chatContent: some View {
-    let isLight = colorScheme == .light
+      let isLight = colorScheme == .light
+      
     return VStack(spacing: 0) {
-      HStack(spacing: 8) {
-        Text(title)
-          .font(.subheadline.weight(.semibold))
-          .foregroundStyle(.primary)
-        KeyBadge(badge)
-        Spacer()
-        // tiny live indicator
-        Circle().frame(width: 8, height: 8)
-                .foregroundStyle(gateway.isConnected ? .green : .red)
-      }
-      .padding(.horizontal, 12)
-      .padding(.vertical, 10)
+        HStack(spacing: 8) {
+          Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(.primary)
+          KeyBadge(badge)
+          Spacer()
 
-      ScrollView {
-        LazyVStack(alignment: .leading, spacing: 10) {
-          ForEach(model.items) { item in
-            HStack(alignment: .top, spacing: 8) {
-              Text(item.isAI ? "AI" : "You")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 28, alignment: .trailing)
-
-              Text(item.text)
-                .foregroundStyle(.primary)
-                .textSelection(.enabled)
-                .padding(10)
-                .background(
-                  RoundedRectangle(cornerRadius: 10)
-                    .fill(
-                      item.isAI
-                        ? (isLight ? Color.black.opacity(0.05) : Color.white.opacity(0.06))
-                        : (isLight ? Color.black.opacity(0.03) : Color.white.opacity(0.04))
-                    )
-                )
-              Spacer(minLength: 0)
-            }
+          if gateway.presence.count > 0 {
+            Text("\(gateway.presence.count) • \(formatRemaining(gateway.presence.remainingMs))")
+              .font(.caption).foregroundStyle(.secondary)
+              .padding(.horizontal, 8)
+              .padding(.vertical, 4)
+              .background(Color.primary.opacity(0.06), in: Capsule())
           }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-      }
 
+          Circle().frame(width: 8, height: 8)
+            .foregroundStyle(gateway.isConnected ? .green : .red)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 10) {
+                    ForEach(model.items) { item in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text(item.isAI ? "AI" : "You")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 28, alignment: .trailing)
+                            
+                            Text(item.text)
+                                .foregroundStyle(.primary)
+                                .textSelection(.enabled)
+                                .padding(10)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(
+                                            colorScheme == .light
+                                            ? (item.isAI ? Color.black.opacity(0.05) : Color.black.opacity(0.03))
+                                            : (item.isAI ? Color.white.opacity(0.06) : Color.white.opacity(0.04))
+                                        )
+                                )
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    
+                    // 👇 Sentinel: when visible, we’re at/near the bottom
+                    Color.clear
+                        .frame(height: 1)
+                        .id(bottomSentinelID)
+                        .onAppear { isNearBottom = true }
+                        .onDisappear { isNearBottom = false }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            }
+            // When a new message arrives, scroll *only if* user is already near bottom
+            .onChange(of: model.items.count) { _ in
+                if isNearBottom {
+                    withAnimation(.easeOut(duration: 0.16)) {
+                        proxy.scrollTo(bottomSentinelID, anchor: .bottom)
+                    }
+                }
+            }
+        }
       chatInputArea
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

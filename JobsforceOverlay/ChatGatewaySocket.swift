@@ -9,7 +9,8 @@ final class ChatGatewaySocket: ObservableObject {
     var baseURL: URL {
       switch self {
       // Use http for local dev; the client upgrades to WS automatically.
-      case .local: return URL(string: "http://localhost:8081")!
+//      case .local: return URL(string: "http://localhost:8081")!
+      case .local: return URL(string: "http://127.0.0.1:8081")!
       // Use https for prod (TLS). You can also set .secure(true) if needed.
       case .prod:  return URL(string: "https://your-chat-gateway-domain.com")!
       }
@@ -37,72 +38,108 @@ final class ChatGatewaySocket: ObservableObject {
     self.path = path
   }
 
-  func configure() {
-    let cfg: SocketIOClientConfiguration = [
-      .log(false),
-      .compress,
-      .path(path),
-      .reconnects(true),
-      .reconnectAttempts(-1),      // never give up
-      .reconnectWait(2),
-      .reconnectWaitMax(10),
-      .randomizationFactor(0.5),
-      .forceWebsockets(true)       // WebSocket only (no long-polling)
-    ]
-    let mgr = SocketManager(socketURL: env.baseURL, config: cfg)
-    let sock = mgr.defaultSocket
+    func configure() {
+      let cfg: SocketIOClientConfiguration = [
+        .log(false),
+        .compress,
+        .path(path),                 // <- ensure this matches your server; default Socket.IO is "/socket.io"
+        .reconnects(true),
+        .reconnectAttempts(-1),
+        .reconnectWait(2),
+        .reconnectWaitMax(10),
+        .randomizationFactor(0.5)
+//        .forceWebsockets(true)
+      ]
 
-    // Core lifecycle
-    sock.on(clientEvent: .connect) { [weak self] _, _ in
-      guard let self else { return }
-      self.isConnecting = false
-      self.isConnected = true
-      self.lastError = nil
-      // Immediately join the room (no payload)
-      sock.emit("join")
-    }
+      let mgr = SocketManager(socketURL: env.baseURL, config: cfg)
+      let sock = mgr.defaultSocket
 
-    sock.on(clientEvent: .disconnect) { [weak self] data, _ in
-      guard let self else { return }
-      self.isConnecting = false
-      self.isConnected = false
-      if let reason = data.first as? String, reason.isEmpty == false {
-        self.lastError = "Disconnected: \(reason)"
+      // --- Core lifecycle ---
+      sock.on(clientEvent: .connect) { [weak self] _, _ in
+        guard let self else { return }
+        Task { @MainActor in
+          self.isConnecting = false
+          self.isConnected  = true
+          self.lastError    = nil
+        }
+        // Ask server to join presence-able room (optional, if your server expects it)
+        sock.emit("join")
+        // Proactively request a presence snapshot (optional)
+        sock.emit("presence:request")
       }
+
+      sock.on(clientEvent: .disconnect) { [weak self] data, _ in
+        guard let self else { return }
+        let reason = (data.first as? String).flatMap { $0.isEmpty ? nil : $0 }
+        Task { @MainActor in
+          self.isConnecting = false
+          self.isConnected  = false
+          self.lastError    = reason.map { "Disconnected: \($0)" }
+        }
+      }
+
+      sock.on(clientEvent: .error) { [weak self] data, _ in
+        guard let self else { return }
+        Task { @MainActor in
+          self.isConnecting = false
+          self.isConnected  = false
+          self.lastError    = "Socket error: \(data)"
+        }
+      }
+
+      // --- Presence: handle multiple event names & numeric types ---
+      let presenceHandler: NormalCallback = { [weak self] data, _ in
+        guard let self else { return }
+        guard let obj = data.first as? [String: Any] else { return }
+
+        // count can be Int / NSNumber / Double
+        let count: Int = {
+          if let v = obj["count"] as? Int         { return v }
+          if let v = obj["count"] as? NSNumber    { return v.intValue }
+          if let v = obj["count"] as? Double      { return Int(v) }
+          return 0
+        }()
+
+        // remainingMs can be Int / NSNumber / Double
+        let remainingMs: Int = {
+          if let v = obj["remainingMs"] as? Int      { return v }
+          if let v = obj["remainingMs"] as? NSNumber { return v.intValue }
+          if let v = obj["remainingMs"] as? Double   { return Int(v) }
+          // accept "ttlSeconds" fallback if your server sends seconds
+          if let secs = obj["ttlSeconds"] as? Int    { return secs * 1000 }
+          if let secs = obj["ttlSeconds"] as? Double { return Int(secs * 1000) }
+          return 0
+        }()
+
+        Task { @MainActor in
+          self.presence = Presence(count: count, remainingMs: max(0, remainingMs))
+        }
+      }
+
+      // Listen to both common names (use the one your server actually emits)
+      sock.on("presenceUpdate", callback: presenceHandler)
+      sock.on("presence",        callback: presenceHandler)
+
+      // --- Messages ---
+      sock.on("newMessage") { [weak self] data, _ in
+        guard let self else { return }
+        guard
+          let obj  = data.first as? [String: Any],
+          let text = (obj["message"] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+          !text.isEmpty
+        else { return }
+        // UI callback; keep on main actor to match your @MainActor class
+        Task { @MainActor in self.onIncomingMessage?(text) }
+      }
+
+      sock.on("sessionEnded") { [weak self] _, _ in
+        Task { @MainActor in self?.onIncomingMessage?("— Session ended —") }
+      }
+
+      self.manager = mgr
+      self.socket  = sock
     }
-
-    sock.on(clientEvent: .error) { [weak self] data, _ in
-      guard let self else { return }
-      self.isConnecting = false
-      self.isConnected = false
-      self.lastError = "Socket error: \(data)"
-    }
-
-    sock.on(clientEvent: .ping) { _, _ in /* keep-alive */ }
-
-    // Server events
-    sock.on("presenceUpdate") { [weak self] data, _ in
-      guard let self, let obj = data.first as? [String: Any] else { return }
-      let count = (obj["count"] as? Int) ?? 0
-      let remaining = (obj["remainingMs"] as? Int) ?? 0
-      self.presence = Presence(count: count, remainingMs: remaining)
-    }
-
-    sock.on("newMessage") { [weak self] data, _ in
-      guard let self,
-            let obj = data.first as? [String: Any],
-            let text = (obj["message"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-            text.isEmpty == false else { return }
-      self.onIncomingMessage?(text)
-    }
-
-    sock.on("sessionEnded") { [weak self] _, _ in
-      self?.onIncomingMessage?("— Session ended —")
-    }
-
-    self.manager = mgr
-    self.socket = sock
-  }
 
   /// Start the connection with an auth token sent in the handshake.
   func connect(token: String) {
