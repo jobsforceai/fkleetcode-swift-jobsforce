@@ -29,6 +29,7 @@ final class ChatGatewaySocket: ObservableObject {
 
   private var manager: SocketManager?
   private var socket: SocketIOClient?
+  private var presenceTimer: Timer?
 
   private let env: Env
   private let path: String
@@ -94,9 +95,13 @@ final class ChatGatewaySocket: ObservableObject {
 
         // count can be Int / NSNumber / Double
         let count: Int = {
-          if let v = obj["count"] as? Int         { return v }
-          if let v = obj["count"] as? NSNumber    { return v.intValue }
-          if let v = obj["count"] as? Double      { return Int(v) }
+          if let v = obj["count"] as? Int { return v }
+          if let v = obj["count"] as? NSNumber { return v.intValue }
+          if let v = obj["count"] as? Double { return Int(v) }
+          // also accept "participantCount"
+          if let v = obj["participantCount"] as? Int { return v }
+          if let v = obj["participantCount"] as? NSNumber { return v.intValue }
+          if let v = obj["participantCount"] as? Double { return Int(v) }
           return 0
         }()
 
@@ -112,13 +117,14 @@ final class ChatGatewaySocket: ObservableObject {
         }()
 
         Task { @MainActor in
-          self.presence = Presence(count: count, remainingMs: max(0, remainingMs))
+          self.updatePresence(count: count, remainingMs: max(0, remainingMs))
         }
       }
 
-      // Listen to both common names (use the one your server actually emits)
-      sock.on("presenceUpdate", callback: presenceHandler)
-      sock.on("presence",        callback: presenceHandler)
+      // Listen to all common names (use the one your server actually emits)
+      sock.on("presenceUpdate",    callback: presenceHandler)
+      sock.on("presence",          callback: presenceHandler)
+      sock.on("presence:snapshot", callback: presenceHandler)
 
       // --- Messages ---
       sock.on("newMessage") { [weak self] data, _ in
@@ -156,5 +162,32 @@ final class ChatGatewaySocket: ObservableObject {
     socket.emit("sendMessage", ["message": text])
   }
 
-  func disconnect() { socket?.disconnect() }
+  func disconnect() {
+    socket?.disconnect()
+    presenceTimer?.invalidate()
+  }
+
+  private func updatePresence(count: Int, remainingMs: Int) {
+    presenceTimer?.invalidate()
+    self.presence = Presence(count: count, remainingMs: remainingMs)
+
+    guard remainingMs > 0 else { return }
+
+    self.presenceTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+      guard let self = self else {
+        timer.invalidate()
+        return
+      }
+
+      Task { @MainActor in
+        let newRemainingMs = self.presence.remainingMs - 1000
+        if newRemainingMs > 0 {
+          self.presence = Presence(count: self.presence.count, remainingMs: newRemainingMs)
+        } else {
+          self.presence = Presence(count: self.presence.count, remainingMs: 0)
+          timer.invalidate()
+        }
+      }
+    }
+  }
 }
