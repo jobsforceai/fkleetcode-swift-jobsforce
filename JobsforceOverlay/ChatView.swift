@@ -39,6 +39,7 @@ struct ChatView: View {
     @State private var colorScheme: ColorScheme = .light
     @State private var isChatLocked = true
     @State private var isAILocked  = true
+    @State private var showShortcuts = false
 
   // 🎙️ Transcription
   @StateObject private var transcriber = TranscriptionDirector()
@@ -226,7 +227,6 @@ struct ChatView: View {
 
         // your panel + footer
         activePanel
-        footerHints
       }
       .padding(10)
       .background(
@@ -270,23 +270,25 @@ struct ChatView: View {
       SegmentedTwoButton(selection: $focus, left: .chat, right: .ai)
 
       Spacer(minLength: 12)
-
-      // Right: Hide button with hint
+        
       Button {
-        NSApp.keyWindow?.orderOut(nil)
+        showShortcuts.toggle()
       } label: {
-        HStack(spacing: 8) {
-          Text("Hide")
-            .font(.subheadline.weight(.semibold))
+        HStack(spacing: 2) {
+          Image(systemName: "keyboard.fill")
+            .font(.system(size: 14, weight: .semibold))
             .foregroundStyle(.primary)
-          KeyBadge("⌘⌥V")
+            .padding(8)
+            .background(colorScheme == .light ? Color.black.opacity(0.06) : Color.white.opacity(0.04), in: Circle())
+            .contentShape(Circle())
+          KeyBadge("⌘⌥K")
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(colorScheme == .light ? Color.black.opacity(0.06) : Color.white.opacity(0.04), in: Capsule())
       }
       .buttonStyle(.plain)
-      .keyboardShortcut("v", modifiers: [.command, .option])
+      .keyboardShortcut("k", modifiers: [.command, .option])
+      .popover(isPresented: $showShortcuts, arrowEdge: .bottom) {
+        shortcutsPopoverContent
+      }
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 10)
@@ -322,17 +324,38 @@ struct ChatView: View {
     .animation(.easeInOut(duration: 0.18), value: focus)
   }
 
-  // MARK: Footer Hints
+  // MARK: Shortcuts Popover
 
-  private var footerHints: some View {
-    HStack(spacing: 12) {
-      HintPill(label: "Screenshot",   shortcut: "⌘⌥A")
-      HintPill(label: "Toggle Theme", shortcut: "⌘⌥T")
-      Spacer()
-    }
-    .padding(10)
-    .background(colorScheme == .light ? Color.black.opacity(0.04) : Color.white.opacity(0.03))
+  private var shortcutsPopoverContent: some View {
+      VStack(alignment: .leading, spacing: 10) {
+          Text("Shortcuts").font(.headline).padding(.bottom, 4)
+          ShortcutHint(label: "Focus Chat", shortcut: "⌘1")
+          ShortcutHint(label: "Focus AI Chat", shortcut: "⌘2")
+          Divider()
+          ShortcutHint(label: "Screenshot", shortcut: "⌘⌥A")
+          ShortcutHint(label: "Toggle Theme", shortcut: "⌘⌥T")
+          ShortcutHint(label: "Hide Window", shortcut: "⌘⌥V")
+          Divider()
+          ShortcutHint(label: "Toggle Shortcuts", shortcut: "⌘⌥K")
+      }
+      .padding(12)
+      .frame(width: 230)
   }
+}
+
+private struct ShortcutHint: View {
+    let label: String
+    let shortcut: String
+
+    var body: some View {
+        HStack {
+            Text(label)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+            Spacer()
+            KeyBadge(shortcut)
+        }
+    }
 }
 
 private struct KeyBadge: View {
