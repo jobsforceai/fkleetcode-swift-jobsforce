@@ -160,8 +160,7 @@ struct ChatView: View {
     // The top, small “toolbar” island
     private var headerIsland: some View {
       header
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
         .background(
           .ultraThinMaterial,
           in: RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -518,16 +517,16 @@ private struct ChatPanelView: View {
           KeyBadge(badge)
           Spacer()
 
-          if gateway.presence.count > 0 {
-            Text("\(gateway.presence.count) • \(formatRemaining(gateway.presence.remainingMs))")
-              .font(.caption).foregroundStyle(.secondary)
-              .padding(.horizontal, 8)
-              .padding(.vertical, 4)
-              .background(Color.primary.opacity(0.06), in: Capsule())
-          }
-
-          Circle().frame(width: 8, height: 8)
-            .foregroundStyle(gateway.isConnected ? .green : .red)
+//          if gateway.presence.count > 0 {
+//            Text("\(gateway.presence.count) • \(formatRemaining(gateway.presence.remainingMs))")
+//              .font(.caption).foregroundStyle(.secondary)
+//              .padding(.horizontal, 8)
+//              .padding(.vertical, 4)
+//              .background(Color.primary.opacity(0.06), in: Capsule())
+//          }
+//
+//          Circle().frame(width: 8, height: 8)
+//            .foregroundStyle(gateway.isConnected ? .green : .red)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
