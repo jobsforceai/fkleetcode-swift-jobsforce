@@ -1,0 +1,54 @@
+import SwiftUI
+
+struct ChatBubbleView: View {
+    let item: ChatBubble
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if !item.isAI { Spacer(minLength: 40) }
+            
+            VStack(alignment: item.isAI ? .leading : .trailing, spacing: 4) {
+                if item.type == "code" {
+                    codeBubble
+                } else {
+                    textBubble
+                }
+            }
+            .frame(maxWidth: 540, alignment: item.isAI ? .leading : .trailing)
+            
+            if item.isAI { Spacer(minLength: 40) }
+        }
+    }
+
+    private var textBubble: some View {
+        Text(item.text)
+            .foregroundStyle(item.isAI ? Color.primary : Color.white)
+            .textSelection(.enabled)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(item.isAI
+                          ? (colorScheme == .light ? Color.black.opacity(0.05) : Color.white.opacity(0.06))
+                          : Color.blue
+                    )
+            )
+    }
+
+    private var codeBubble: some View {
+        Text(item.text)
+            .font(.system(.body, design: .monospaced))
+            .foregroundStyle(.primary)
+            .textSelection(.enabled)
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(
+                        colorScheme == .light
+                        ? Color.black.opacity(0.08)
+                        : Color.white.opacity(0.10)
+                    )
+            )
+    }
+}

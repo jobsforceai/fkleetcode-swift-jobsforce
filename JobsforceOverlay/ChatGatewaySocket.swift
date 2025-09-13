@@ -17,6 +17,11 @@ final class ChatGatewaySocket: ObservableObject {
     }
   }
 
+  struct ReceivedMessage {
+    let type: String
+    let content: String
+  }
+
   struct Presence: Equatable { let count: Int; let remainingMs: Int }
 
     @Published var isConnected = false
@@ -25,7 +30,7 @@ final class ChatGatewaySocket: ObservableObject {
     @Published var isConnecting = false
 
   // Hook the UI in: whenever a server message arrives, call this.
-  var onIncomingMessage: ((String) -> Void)?
+  var onIncomingMessage: ((ReceivedMessage) -> Void)?
 
   private var manager: SocketManager?
   private var socket: SocketIOClient?
@@ -130,17 +135,19 @@ final class ChatGatewaySocket: ObservableObject {
       sock.on("newMessage") { [weak self] data, _ in
         guard let self else { return }
         guard
-          let obj  = data.first as? [String: Any],
-          let text = (obj["message"] as? String)?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-          !text.isEmpty
+          let obj = data.first as? [String: Any],
+          let type = obj["type"] as? String,
+          let content = obj["content"] as? String,
+          !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return }
-        // UI callback; keep on main actor to match your @MainActor class
-        Task { @MainActor in self.onIncomingMessage?(text) }
+        
+        let msg = ReceivedMessage(type: type, content: content)
+        Task { @MainActor in self.onIncomingMessage?(msg) }
       }
 
       sock.on("sessionEnded") { [weak self] _, _ in
-        Task { @MainActor in self?.onIncomingMessage?("— Session ended —") }
+        let msg = ReceivedMessage(type: "text", content: "— Session ended —")
+        Task { @MainActor in self?.onIncomingMessage?(msg) }
       }
 
       self.manager = mgr
@@ -159,7 +166,9 @@ final class ChatGatewaySocket: ObservableObject {
 
   func sendMessage(_ text: String) {
     guard let socket, isConnected else { return }
-    socket.emit("sendMessage", ["message": text])
+    // Send as a structured object
+    let payload: [String: Any] = ["type": "text", "content": text]
+    socket.emit("sendMessage", payload)
   }
 
   func disconnect() {

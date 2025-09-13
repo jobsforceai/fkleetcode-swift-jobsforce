@@ -44,6 +44,19 @@ final class OverlayWindow: NSPanel {  // ← NSPanel, not NSWindow
 
     // Float above app content (you can bump to .popUpMenu if needed)
     level = .statusBar
+    
+    // Disable focus ring
+    self.isReleasedWhenClosed = false
+    self.styleMask.insert(.utilityWindow)
+    self.styleMask.remove(.titled)
+    self.styleMask.insert(.fullSizeContentView)
+    self.titlebarAppearsTransparent = true
+    self.titleVisibility = .hidden
+    self.isMovableByWindowBackground = true
+    self.standardWindowButton(.closeButton)?.isHidden = true
+    self.standardWindowButton(.miniaturizeButton)?.isHidden = true
+    self.standardWindowButton(.zoomButton)?.isHidden = true
+    self.standardWindowButton(.closeButton)?.superview?.superview?.removeFromSuperview()
 
     // Hide from screen share / modern capture (KVC fallback)
 //    if responds(to: Selector(("setSharingType:"))) {
