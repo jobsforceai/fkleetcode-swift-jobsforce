@@ -20,6 +20,7 @@ final class ChatGatewaySocket: ObservableObject {
   struct ReceivedMessage {
     let type: String
     let content: String
+    let senderName: String
   }
 
   struct Presence: Equatable { let count: Int; let remainingMs: Int }
@@ -136,17 +137,19 @@ final class ChatGatewaySocket: ObservableObject {
         guard let self else { return }
         guard
           let obj = data.first as? [String: Any],
+          let from = obj["from"] as? [String: String],
+          let senderName = from["name"],
           let type = obj["type"] as? String,
           let content = obj["content"] as? String,
           !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else { return }
         
-        let msg = ReceivedMessage(type: type, content: content)
+        let msg = ReceivedMessage(type: type, content: content, senderName: senderName)
         Task { @MainActor in self.onIncomingMessage?(msg) }
       }
 
       sock.on("sessionEnded") { [weak self] _, _ in
-        let msg = ReceivedMessage(type: "text", content: "— Session ended —")
+        let msg = ReceivedMessage(type: "text", content: "— Session ended —", senderName: "System")
         Task { @MainActor in self?.onIncomingMessage?(msg) }
       }
 

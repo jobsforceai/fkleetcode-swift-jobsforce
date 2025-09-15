@@ -9,6 +9,11 @@ struct ChatBubbleView: View {
             if !item.isAI { Spacer(minLength: 40) }
             
             VStack(alignment: item.isAI ? .leading : .trailing, spacing: 4) {
+                Text(item.senderName)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+
                 if item.type == "code" {
                     codeBubble
                 } else {

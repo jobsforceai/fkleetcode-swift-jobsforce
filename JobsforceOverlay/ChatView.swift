@@ -38,18 +38,18 @@ struct ChatView: View {
 
           // 2) Append incoming messages to the chat column
           gateway.onIncomingMessage = { msg in
-            chatModel.items.append(.init(type: msg.type, text: msg.content, isAI: true))
+            chatModel.items.append(.init(type: msg.type, text: msg.content, senderName: msg.senderName, isAI: true))
           }
           
           if chatModel.items.isEmpty {
-            chatModel.items.append(.init(type: "text", text: "Enter your Host token to start.", isAI: true))
+            chatModel.items.append(.init(type: "text", text: "Enter your Host token to start.", senderName: "System", isAI: true))
           }
       }
       .onReceive(NotificationCenter.default.publisher(for: .jfShotReady)) { note in
         if let url = note.object as? URL {
-          chatModel.items.append(.init(type: "text", text: "Screenshot: \(url.lastPathComponent)", isAI: false))
+          chatModel.items.append(.init(type: "text", text: "Screenshot: \(url.lastPathComponent)", senderName: "You", isAI: false))
         } else {
-          chatModel.items.append(.init(type: "text", text: "Screenshot failed (permission?)", isAI: true))
+          chatModel.items.append(.init(type: "text", text: "Screenshot failed (permission?)", senderName: "System", isAI: true))
         }
       }
       .onReceive(NotificationCenter.default.publisher(for: .jfSetFocus)) { note in

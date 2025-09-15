@@ -7,6 +7,7 @@ struct ChatBubble: Identifiable {
   let id = UUID()
   let type: String // "text" or "code"
   let text: String
+  let senderName: String
   let isAI: Bool
 }
 
