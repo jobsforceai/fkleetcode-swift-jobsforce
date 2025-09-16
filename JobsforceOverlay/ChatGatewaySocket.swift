@@ -1,6 +1,59 @@
 import Foundation
 import SocketIO
 import Combine
+import UniformTypeIdentifiers
+
+private func fileExtension(for mime: String) -> String {
+  switch mime.lowercased() {
+  case "image/jpeg", "image/jpg": return "jpg"
+  case "image/png": return "png"
+  case "image/webp": return "webp"
+  case "image/gif":  return "gif"
+  default: return "bin"
+  }
+}
+
+private func writeTempFile(data: Data, suggestedName: String, mime: String) -> URL? {
+  let ext = fileExtension(for: mime)
+  let base = suggestedName.isEmpty ? "image" : (suggestedName as NSString).deletingPathExtension
+  let filename = "\(base)-\(UUID().uuidString).\(ext)"
+  let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+  do {
+    try data.write(to: url, options: .atomic)
+    return url
+  } catch {
+    print("Temp write failed:", error)
+    return nil
+  }
+}
+
+private func coerceToData(_ any: Any) -> Data? {
+  if let d = any as? Data { return d }
+  if let arr = any as? [UInt8] { return Data(arr) }
+  if let arr = any as? [NSNumber] { return Data(arr.map { $0.uint8Value }) }
+  if let dict = any as? [String: Any],
+     let type = dict["type"] as? String,
+     type.lowercased() == "buffer" {
+    if let arr = dict["data"] as? [UInt8] {
+      return Data(arr)
+    }
+    if let arr = dict["data"] as? [NSNumber] {
+      return Data(arr.map { $0.uint8Value })
+    }
+  }
+  return nil
+}
+
+private func bestMimeType(imageName: String, fallback: String?) -> String {
+  if let m = fallback, !m.isEmpty { return m }
+  switch (imageName as NSString).pathExtension.lowercased() {
+    case "jpg", "jpeg": return "image/jpeg"
+    case "png":         return "image/png"
+    case "gif":         return "image/gif"
+    case "webp":        return "image/webp"
+    default:            return "application/octet-stream"
+  }
+}
 
 @MainActor
 final class ChatGatewaySocket: ObservableObject {
@@ -19,7 +72,8 @@ final class ChatGatewaySocket: ObservableObject {
 
   struct ReceivedMessage {
     let type: String
-    let content: String
+    let content: String?
+    let imageUrl: String?
     let senderName: String
   }
 
@@ -136,20 +190,56 @@ final class ChatGatewaySocket: ObservableObject {
       sock.on("newMessage") { [weak self] data, _ in
         guard let self else { return }
         guard
-          let obj = data.first as? [String: Any],
-          let from = obj["from"] as? [String: String],
-          let senderName = from["name"],
-          let type = obj["type"] as? String,
-          let content = obj["content"] as? String,
-          !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+          let obj  = data.first as? [String: Any],
+          let from = obj["from"] as? [String: Any],
+          let senderName = from["name"] as? String,
+          let type = obj["type"] as? String
         else { return }
-        
-        let msg = ReceivedMessage(type: type, content: content, senderName: senderName)
+
+        var content  = obj["content"] as? String
+        var imageUrl = obj["imageUrl"] as? String
+
+        if type == "image", imageUrl == nil {
+          // 1) Try embedded binary (various shapes)
+          var bin: Data? = nil
+          if let any = obj["imageData"] {
+            bin = coerceToData(any)
+          }
+
+          // 2) Or as a second event argument (Socket.IO attachments)
+          if bin == nil, data.count >= 2 {
+            bin = coerceToData(data[1])
+          }
+
+          // 3) If we found bytes, write a temp file and point AsyncImage to file:// URL
+          if let bin {
+            let imageName      = (obj["imageName"] as? String) ?? "image"
+            let mimeFromServer = obj["imageType"] as? String
+            let finalMime      = bestMimeType(imageName: imageName, fallback: mimeFromServer)
+
+            if let localURL = writeTempFile(data: bin, suggestedName: imageName, mime: finalMime) {
+              imageUrl = localURL.absoluteString
+            } else {
+              content = (content ?? "") + "\n⚠️ Failed to materialize incoming image."
+            }
+          }
+        }
+
+        // Guard rails
+        if type == "text" {
+          let trimmed = (content ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+          guard !trimmed.isEmpty else { return }
+        } else if type == "image" {
+          guard let u = imageUrl, !u.isEmpty else { return }
+        }
+
+        let msg = ReceivedMessage(type: type, content: content, imageUrl: imageUrl, senderName: senderName)
         Task { @MainActor in self.onIncomingMessage?(msg) }
       }
 
+
       sock.on("sessionEnded") { [weak self] _, _ in
-        let msg = ReceivedMessage(type: "text", content: "— Session ended —", senderName: "System")
+        let msg = ReceivedMessage(type: "text", content: "— Session ended —", imageUrl: nil, senderName: "System")
         Task { @MainActor in self?.onIncomingMessage?(msg) }
       }
 
@@ -200,6 +290,55 @@ final class ChatGatewaySocket: ObservableObject {
           timer.invalidate()
         }
       }
+    }
+  }
+}
+
+extension ChatGatewaySocket {
+  /// Send an image file at URL (e.g., your screenshot) with optional caption.
+  func sendImage(at url: URL, caption: String? = nil) {
+    guard let socket, isConnected else { return }
+    guard let data = try? Data(contentsOf: url) else { return }
+
+    // Guess MIME from extension; fallback to png if unknown
+    let ext = url.pathExtension.lowercased()
+    let mime: String = {
+      switch ext {
+      case "jpg", "jpeg": return "image/jpeg"
+      case "png":         return "image/png"
+      case "gif":         return "image/gif"
+      case "webp":        return "image/webp"
+      default:            return "image/png"
+      }
+    }()
+
+    let meta: [String: Any] = [
+      "name": url.lastPathComponent,
+      "type": mime,
+      "size": data.count
+    ]
+
+    // Socket.IO: emit(meta, binary, ack)
+    socket.emit("sendImage", meta, data) {
+      // optional: inspect ack array if you returned anything else
+    }
+
+    // If you want to also send a caption as a text message, you can do it here:
+    if let c = caption, !c.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      let payload: [String: Any] = ["type": "text", "content": c]
+      socket.emit("sendMessage", payload)
+    }
+  }
+
+  /// Send image from raw Data (when you already have it in memory).
+  func sendImageData(_ data: Data, filename: String = "image.png", mime: String = "image/png", caption: String? = nil) {
+    guard let socket, isConnected else { return }
+    let meta: [String: Any] = ["name": filename, "type": mime, "size": data.count]
+    socket.emit("sendImage", meta, data)
+
+    if let c = caption, !c.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+      let payload: [String: Any] = ["type": "text", "content": c]
+      socket.emit("sendMessage", payload)
     }
   }
 }

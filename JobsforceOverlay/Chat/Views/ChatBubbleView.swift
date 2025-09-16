@@ -16,6 +16,8 @@ struct ChatBubbleView: View {
 
                 if item.type == "code" {
                     codeBubble
+                } else if item.type == "image" {
+                    imageBubble
                 } else {
                     textBubble
                 }
@@ -26,8 +28,22 @@ struct ChatBubbleView: View {
         }
     }
 
+    private var imageBubble: some View {
+        AsyncImage(url: item.imageUrl) { image in
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .cornerRadius(12)
+        } placeholder: {
+            ProgressView()
+                .progressViewStyle(.circular)
+                .padding()
+        }
+        .frame(maxWidth: 300)
+    }
+
     private var textBubble: some View {
-        Text(item.text)
+        Text(item.text ?? "")
             .foregroundStyle(item.isAI ? Color.primary : Color.white)
             .textSelection(.enabled)
             .padding(.horizontal, 12)
@@ -42,7 +58,7 @@ struct ChatBubbleView: View {
     }
 
     private var codeBubble: some View {
-        Text(item.text)
+        Text(item.text ?? "")
             .font(.system(.body, design: .monospaced))
             .foregroundStyle(.primary)
             .textSelection(.enabled)

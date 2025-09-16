@@ -5,8 +5,9 @@ import SwiftUI
 
 struct ChatBubble: Identifiable {
   let id = UUID()
-  let type: String // "text" or "code"
-  let text: String
+  let type: String // "text", "code", or "image"
+  let text: String?
+  let imageUrl: URL?
   let senderName: String
   let isAI: Bool
 }

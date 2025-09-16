@@ -38,18 +38,21 @@ struct ChatView: View {
 
           // 2) Append incoming messages to the chat column
           gateway.onIncomingMessage = { msg in
-            chatModel.items.append(.init(type: msg.type, text: msg.content, senderName: msg.senderName, isAI: true))
+            let imageURL = msg.imageUrl != nil ? URL(string: msg.imageUrl!) : nil
+            chatModel.items.append(.init(type: msg.type, text: msg.content, imageUrl: imageURL, senderName: msg.senderName, isAI: true))
           }
           
           if chatModel.items.isEmpty {
-            chatModel.items.append(.init(type: "text", text: "Enter your Host token to start.", senderName: "System", isAI: true))
+            chatModel.items.append(.init(type: "text", text: "Enter your Host token to start.", imageUrl: nil, senderName: "System", isAI: true))
           }
       }
       .onReceive(NotificationCenter.default.publisher(for: .jfShotReady)) { note in
         if let url = note.object as? URL {
-          chatModel.items.append(.init(type: "text", text: "Screenshot: \(url.lastPathComponent)", senderName: "You", isAI: false))
+            chatModel.items.append(.init(type: "image", text: nil, imageUrl: url, senderName: "You", isAI: false))
+            //  actually send to peers
+            gateway.sendImage(at: url)
         } else {
-          chatModel.items.append(.init(type: "text", text: "Screenshot failed (permission?)", senderName: "System", isAI: true))
+            chatModel.items.append(.init(type: "text", text: "Screenshot failed (permission?)", imageUrl: nil, senderName: "System", isAI: true))
         }
       }
       .onReceive(NotificationCenter.default.publisher(for: .jfSetFocus)) { note in

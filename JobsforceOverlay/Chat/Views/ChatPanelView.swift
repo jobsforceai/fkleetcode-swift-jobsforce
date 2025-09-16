@@ -100,7 +100,7 @@ struct ChatPanelView: View {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         // Append locally for instant UX
-        model.items.append(.init(type: "text", text: trimmed, senderName: "You", isAI: false))
+        model.items.append(.init(type: "text", text: trimmed, imageUrl: nil, senderName: "You", isAI: false))
           
         // Send to the gateway (the server will also broadcast a newMessage)
         // Access the gateway via an EnvironmentObject if you prefer;
